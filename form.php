@@ -1,12 +1,15 @@
 <?php
 session_start();
+// Disable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once 'db_connection.php'; // Include the database connection file
 
-// Disable error reporting
-error_reporting(0);
+
+
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Sanitize and validate input
     $username = filter_var($_POST['username'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
     $password = $_POST['password']; // Get password from the form (consider hashing it)
@@ -14,17 +17,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($email === false) {
         echo "Invalid email format.";
     } else {
-        // Insert data into the database
+		// Hash the password
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        
+		// Insert data into the database
         try {
             $stmt = $pdo->prepare("INSERT INTO info (username, password, Email) VALUES (?, ?, ?)");
             $stmt->execute([$username, $password, $email]); // Execute with parameters
 
-            // Set session and cookies
-            $_SESSION['username'] = $username; // Store username in session
-            setcookie("username", $username, time() + 3600, "/"); // Cookie for username
-            setcookie("email", $email, time() + 3600, "/"); // Cookie for email
-
-            echo "Information submitted successfully.";
+           // Set session and cookies with security attributes
+            $_SESSION['username'] = $username;
+            setcookie("email", $email, time() + 3600, "/", "", true, true); // Secure and HttpOnly
+			
+			// Redirect to index.php after successful submission
+            header('Location: index.php');
+            exit(); // Ensure no further code is executed
+			
         } catch (PDOException $e) {
             echo "Error: " . $e->getMessage();
         }
@@ -51,7 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
     <div class="forms-section">
         <h2>Submit Your Information</h2>
-        <form action="index.php" method="POST"> <!-- Change action to form.php -->
+        <form action="form.php" method="POST"> 
             <label for="username">Username:</label><br>
             <input type="text" id="username" name="username" required><br><br>
             
